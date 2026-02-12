@@ -7,3 +7,5 @@ export type { SitemapEntry } from './utils/xml-builder.js';
 
 export { parsePage } from './utils/html-parser.js';
 export type { ParsedPage, ImageData } from './utils/html-parser.js';
+
+export { normalizeUrl, isValidUrl, isSameOrigin, resolveUrl } from './utils/url.js';
