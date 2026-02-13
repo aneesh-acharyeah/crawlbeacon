@@ -5,7 +5,7 @@ export default defineConfig({
     globals: true,
     coverage: {
       provider: 'v8',
-      include: ['src/core/**', 'src/utils/**'],
+      include: ['src/core/**', 'src/utils/**', 'src/cli/**'],
     },
   },
 });
