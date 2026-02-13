@@ -45,8 +45,16 @@
     "nextjs",
     "audit"
   ],
-  "author": "",
+  "author": "aneesh-acharyeah",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/aneesh-acharyeah/crawlbeacon.git"
+  },
+  "homepage": "https://crawlbeacon.com",
+  "bugs": {
+    "url": "https://github.com/aneesh-acharyeah/crawlbeacon/issues"
+  },
   "dependencies": {
     "axios": "^1.7.0",
     "cheerio": "^1.0.0",
