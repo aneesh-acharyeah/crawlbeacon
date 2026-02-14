@@ -4,17 +4,8 @@
 
 **CrawlBeacon** is an SEO linter for deployment pipelines. It checks any URL for SEO issues and produces a scored report — designed for CI/CD integration via `npx crawlbeacon check <url>`.
 
-**Positioning:** "ESLint for SEO" — catches SEO regressions in every PR before they hit production.
-
 **Repo:** https://github.com/aneesh-acharyeah/crawlbeacon
-**npm:** https://www.npmjs.com/package/crawlbeacon (v0.1.0 published)
-**Web app (separate repo):** marketing site + free online tools at crawlbeacon.com
-
-## Current Status
-
-**Phase 1 COMPLETE.** v0.1.0 published to npm. 121 tests passing. 4 analyzers shipping.
-
-**Next:** Phase 2 — Next.js analyzer, AI readiness, config system, exit codes. See `plan.md` for full task list.
+**Web app (separate repo):** `C:\sitemap` — marketing site + free online tools at crawlbeacon.com
 
 ## Tech Stack
 
@@ -86,7 +77,6 @@ crawlbeacon/
 ├── tsconfig.json
 ├── tsup.config.ts
 ├── vitest.config.ts
-├── plan.md                         # Full roadmap with all phases and tasks
 └── README.md
 ```
 
@@ -105,11 +95,12 @@ npm run lint           # tsc --noEmit (type check)
 ## CLI Usage
 
 ```bash
+# Run from built dist
 node dist/cli.js check <url>
 node dist/cli.js check <url> --format json
 node dist/cli.js check <url> --fail-on warning
 
-# Or via npx
+# Or via npm link / npx
 npx crawlbeacon check <url>
 ```
 
@@ -199,6 +190,8 @@ The `parsePage(html, pageUrl)` function extracts:
 
 ### Fetcher (`src/utils/fetcher.ts`)
 
+Drop-in replacement for raw axios with structured error handling.
+
 **Error codes:** `TIMEOUT`, `ACCESS_RESTRICTED`, `SOFT_PROTECTED`, `NETWORK_ERROR`, `INVALID_RESPONSE`, `RATE_LIMITED`, `SERVER_ERROR`
 
 **Functions:**
@@ -280,12 +273,16 @@ Two implementations: `terminalReporter` (colored table) and `jsonReporter` (JSON
 
 ## Error Handling
 
-1. **Fetch failure** — exits with code 1, outputs error message
+The `check` command has three layers of error handling:
+
+1. **Fetch failure** — exits with code 1, outputs error message (JSON or terminal)
 2. **Parse failure** — `parsePage()` wrapped in try-catch, exits with code 1
-3. **Analyzer failure** — each analyzer in `safeAnalyze()`, returns fallback result (other analyzers still run)
+3. **Analyzer failure** — each analyzer wrapped in `safeAnalyze()`, returns fallback `AnalyzerResult` with score 0 and `ANALYZER_ERROR` issue (other analyzers still run)
 4. **Reporter failure** — `reporter.format()` wrapped in try-catch, falls back to `JSON.stringify`
 
 ## Build Output
+
+tsup produces two entry points:
 
 | Output | Format | Purpose |
 |--------|--------|---------|
@@ -294,15 +291,30 @@ Two implementations: `terminalReporter` (colored table) and `jsonReporter` (JSON
 | `dist/index.d.ts` | DTS | TypeScript declarations |
 | `dist/cli.js` | ESM + shebang | CLI binary (`#!/usr/bin/env node`) |
 
-The shebang is added by tsup's `banner` config — do NOT add `#!/usr/bin/env node` to `src/cli/index.ts`.
+The shebang is added by tsup's `banner` config — do NOT add `#!/usr/bin/env node` to `src/cli/index.ts` (causes duplicate shebang).
 
 ## Testing Patterns
 
-- **Analyzer tests:** Read HTML fixtures with `readFileSync`, call `parsePage()`, then test analyzer
-- **CLI tests:** Mock `ora` and `fetchHTML` via `vi.mock()`, spy on `console.log`, assert output
-- **Error recovery tests:** Mock analyzers to throw, verify `safeAnalyze()` catches
-- **Edge case tests:** empty, malformed, invalid JSON-LD, duplicate meta fixtures
-- **No live HTTP calls** — all network calls are mocked
+- **Analyzer tests:** Read HTML fixtures with `readFileSync`, call `parsePage()`, then test analyzer output
+- **CLI tests:** Mock `ora` (spinner) and `fetchHTML` via `vi.mock()`, spy on `console.log`, assert JSON output
+- **Error recovery tests:** Mock analyzers to throw, verify `safeAnalyze()` catches and returns fallback
+- **Edge case tests:** Test against empty, malformed, invalid JSON-LD, duplicate meta fixtures
+- **No live HTTP calls in tests** — all network calls are mocked
+
+## Environment Variables
+
+- `CRAWLBEACON_DEBUG=1` — enables debug logging to stderr
+- `REACT_APP_API_URL` — not used (web app only)
+
+## npm Publishing
+
+```bash
+npm run prepublishOnly   # builds + runs tests
+npm pack --dry-run       # verify package contents (should be ~63KB, 10 files)
+npm publish              # publish to npm registry
+```
+
+**Package includes:** `dist/`, `README.md`, `LICENSE`
 
 ## Key Conventions
 
@@ -316,96 +328,9 @@ The shebang is added by tsup's `banner` config — do NOT add `#!/usr/bin/env no
 
 ## Common Pitfalls
 
-- **Duplicate shebang:** tsup banner adds `#!/usr/bin/env node` — never add it to source
-- **ESM imports:** All relative imports must end with `.js` (e.g., `'./types.js'`)
-- **Cheerio behavior:** Malformed HTML may produce unexpected results
-- **JSON-LD parsing:** `parsePage` silently filters broken JSON-LD blocks
-- **robots.txt fetch:** Uses `fetchHTML` not `robustFetch`
-- **Test mocking:** `fetchHTML` is called twice in check command (page + robots) — use `mockResolvedValueOnce` for each
-
----
-
-## ⚡ WHAT TO BUILD NEXT
-
-See `plan.md` for the complete roadmap. Here's the immediate focus:
-
-### Current Phase: Phase 2 — Next.js Analyzer + AI Readiness (Week 3-4)
-
-**Priority order:**
-
-1. **Next.js analyze command** — `src/core/frameworks/nextjs.ts` + `src/cli/commands/analyze.ts`
-   - Walk `app/` directory, find `page.tsx` files
-   - Check for `metadata` or `generateMetadata` exports (regex, not AST)
-   - Check for `sitemap.ts`, `robots.ts` at app root
-   - Check root `layout.tsx` for default metadata
-   - Create `src/core/frameworks/detector.ts` for auto-detection
-   - Create `src/core/frameworks/types.ts` with `FrameworkAnalyzer` interface
-
-2. **AI Readiness analyzer** — `src/core/analyzers/ai-readiness.ts`
-   - Check robots.txt for: GPTBot, ClaudeBot, Claude-Web, PerplexityBot, Amazonbot, Applebot-Extended, Bytespider, CCBot, Google-Extended, anthropic-ai, cohere-ai
-   - HEAD request to `/llms.txt` (exists or not)
-   - Score structured data quality (good/basic/none based on schema count)
-   - Score content structure (h2 count)
-   - Weighted score: bots 30% + structured data 30% + content 20% + llms.txt 20%
-
-3. **Exit codes fix** — in `src/cli/commands/check.ts`
-   - Exit 1 if any `severity === 'error'` findings
-   - Add `--strict` flag for warnings-as-errors
-   - Currently always exits 0 (broken for CI/CD)
-
-4. **Config file support** — `src/core/config/`
-   - `schema.ts` — zod schema for `.crawlbeacon.yml`
-   - `loader.ts` — find and parse config from project root
-   - `defaults.ts` — default values
-   - Merge with CLI flags (flags win)
-
-5. **Markdown reporter** — `src/cli/reporters/markdown.ts`
-   - Score emoji + score/100
-   - Table of check results
-   - Issue list with severity icons
-   - Returns string (for GitHub Action PR comments later)
-
-### File creation pattern for new analyzers:
-
-```
-1. Create src/core/analyzers/[name].ts (or src/core/frameworks/[name].ts)
-2. Export a pure function matching the analyzer signature
-3. Add to src/core/analyzers/index.ts barrel export
-4. Create tests/core/analyzers/[name].test.ts
-5. Add fixtures if needed in tests/fixtures/
-6. Wire into check.ts command (or create new command in src/cli/commands/)
-7. Run: npm run lint && npm run test:run && npm run build
-```
-
-### Target project structure after Phase 2:
-
-```
-src/
-├── cli/
-│   ├── commands/
-│   │   ├── check.ts              # existing
-│   │   └── analyze.ts            # NEW — framework analysis
-│   └── reporters/
-│       ├── terminal.ts           # existing
-│       ├── json.ts               # existing
-│       ├── markdown.ts           # NEW — for PR comments
-│       └── types.ts
-├── core/
-│   ├── analyzers/
-│   │   ├── meta.ts               # existing
-│   │   ├── structured-data.ts    # existing
-│   │   ├── images.ts             # existing
-│   │   ├── robots.ts             # existing
-│   │   ├── ai-readiness.ts       # NEW
-│   │   ├── types.ts
-│   │   └── index.ts
-│   ├── frameworks/                # NEW directory
-│   │   ├── nextjs.ts             # NEW — App Router analysis
-│   │   ├── detector.ts           # NEW — auto-detect framework
-│   │   └── types.ts              # NEW — FrameworkAnalyzer interface
-│   └── config/                    # NEW directory
-│       ├── schema.ts             # NEW — zod schema
-│       ├── loader.ts             # NEW — find + parse config
-│       └── defaults.ts           # NEW — default values
-└── utils/                         # existing, no changes
-```
+- **Duplicate shebang:** tsup banner adds `#!/usr/bin/env node` — never add it to source `src/cli/index.ts`
+- **ESM imports:** All relative imports must end with `.js` (e.g., `'./types.js'`), even though source is `.ts`
+- **Cheerio behavior:** Malformed HTML may produce unexpected results (unclosed H1 tags get nested, not counted as separate elements)
+- **JSON-LD parsing:** `parsePage` silently filters broken JSON-LD blocks (returns `null`, filtered out) — valid blocks still extracted
+- **robots.txt fetch:** Uses `fetchHTML` not `robustFetch` — robots.txt is treated as text content
+- **Test mocking:** When mocking `fetchHTML`, remember it's called twice in check command (once for page, once for robots.txt) — use `mockResolvedValueOnce` for each
