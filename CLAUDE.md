@@ -8,7 +8,7 @@
 
 **Repo:** https://github.com/aneesh-acharyeah/crawlbeacon
 **npm:** https://www.npmjs.com/package/crawlbeacon (v0.1.0 published)
-**Web app (separate repo):** marketing site + free online tools at crawlbeacon.com
+**Web app (separate repo):** marketing site + free online tools at https://sitemap-omega.vercel.app (pending domain change to crawlbeacon.com)
 
 ## Current Status
 
