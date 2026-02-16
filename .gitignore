@@ -4,3 +4,5 @@ dist
 coverage
 *.tgz
 .DS_Store
+old-CLAUDE.md
+plan.md
