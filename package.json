@@ -1,6 +1,6 @@
 {
   "name": "crawlbeacon",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "SEO linter for your deployment pipeline",
   "type": "module",
   "main": "./dist/index.cjs",
@@ -51,7 +51,7 @@
     "type": "git",
     "url": "https://github.com/aneesh-acharyeah/crawlbeacon.git"
   },
-  "homepage": "https://sitemap-omega.vercel.app/",
+  "homepage": "https://crawlbeacon.com/",
   "bugs": {
     "url": "https://github.com/aneesh-acharyeah/crawlbeacon/issues"
   },
